@@ -1,6 +1,8 @@
 ﻿namespace VData01.Actions
 {
-	public class Format(string value)
+	using Categories;
+
+	public class Format(string value) : IAction
 	{
 		public static string ExcValue(string value) => $"('{value}')";
 		public override string ToString() => $"'{value}'";

@@ -1,3 +1,21 @@
 ﻿@page "/"
+@page "/Home"
+@page "/{ID}"
+@page "/Home/{ID}"
 
-<h1>Hello, world!</h1>
+@try
+{
+	
+}
+catch (Bases.BaseException ex)
+{
+	<p>
+		@($"Base Exception: {ex}")
+	</p>
+}
+catch (Exception ex)
+{
+	<p>
+		@($"Exception: {ex}")
+	</p>
+}

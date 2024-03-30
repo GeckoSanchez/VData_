@@ -3,13 +3,14 @@
 	using System.Diagnostics;
 	using System.Diagnostics.CodeAnalysis;
 	using Actions;
+	using Categories;
 
 	/// <summary>
 	/// Attribute indicating that the given code-block will not have any log messages
 	/// in any log file
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Constructor, AllowMultiple = false, Inherited = false)]
-	public class UnloggedAttribute : Attribute
+	public class UnloggedAttribute : Attribute, IAttribute
 	{
 		public override object TypeId => base.TypeId;
 

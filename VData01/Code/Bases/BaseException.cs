@@ -4,12 +4,13 @@
 	using System.Runtime.CompilerServices;
 	using Actions;
 	using Attributes;
+	using Categories;
+	using Exceptions;
 	using Kinds;
 	using Newtonsoft.Json;
-	using VData01.Exceptions;
 
 	[JsonObject(MemberSerialization.OptIn)]
-	public class BaseException : Exception
+	public class BaseException : Exception, IBase
 	{
 		[JsonProperty]
 		public override string Message => base.Message;

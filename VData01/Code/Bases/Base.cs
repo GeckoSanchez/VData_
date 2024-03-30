@@ -2,20 +2,29 @@
 {
 	using System.Collections.Generic;
 	using System.Diagnostics;
+	using System.Diagnostics.CodeAnalysis;
 	using Actions;
 	using Attributes;
+	using Categories;
 	using Newtonsoft.Json;
 
-	public class Base : IEquatable<Base?>, IComparable<Base>
+	public class Base : IEquatable<Base?>, IComparable<Base>, IBase, IDisposable
 	{
+		private bool _dispose;
+
+		/// <summary>
+		/// The base <see cref="object"/> data for the
+		/// <see cref="Base"/> class
+		/// </summary>
+		[NotNull]
 		public object Data { get; protected set; }
 
 		/// <summary>
-		/// Main constructor for the <see cref="Base"/> class
+		/// [PROTECTED] Main constructor for the <see cref="Base"/> class
 		/// </summary>
 		/// <param name="data">A <see cref="object"/> data value</param>
 		[MainConstructor]
-		public Base(object data)
+		protected Base(object data)
 		{
 			Log.Event(new StackFrame(true));
 			Data = data;
@@ -171,18 +180,71 @@
 
 		public static bool operator ==(Base? left, Base? right) => EqualityComparer<Base>.Default.Equals(left, right);
 		public static bool operator !=(Base? left, Base? right) => !(left == right);
+
+		/// <exception cref="BaseException"/>
+		protected virtual void Dispose(bool disposing)
+		{
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			try
+			{
+				if (!_dispose)
+				{
+					if (disposing)
+						Data = default!;
+
+					// TODO: free unmanaged resources (unmanaged objects) and override finalizer
+					// TODO: set large fields to null
+					_dispose = true;
+				}
+			}
+			catch (Exception ex)
+			{
+				_dispose = false;
+				throw new BaseException(ex, sf);
+			}
+		}
+
+		/// <inheritdoc cref="IDisposable.Dispose"/>
+		/// <exception cref="BaseException"/>
+		public void Dispose()
+		{
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			try
+			{
+				// Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+				Dispose(disposing: true);
+				GC.SuppressFinalize(this);
+			}
+			catch (Exception ex)
+			{
+				throw new BaseException(ex, sf);
+			}
+		}
 	}
 
 	public class Base<T> : Base, IEquatable<Base<T>?> where T : notnull
 	{
+		/// <summary>
+		/// The base <typeparamref name="T"/> data for the <see cref="Base"/> class
+		/// </summary>
 		public new T Data { get => (T)base.Data; protected set => base.Data = value; }
 
 		/// <summary>
-		/// Main constructor for the <see cref="Base{T}"/> class
+		/// [PROTECTED] Main constructor for the <see cref="Base{T}"/> class
 		/// </summary>
 		/// <param name="data">A <typeparamref name="T"/> data value</param>
 		[JsonConstructor, MainConstructor]
-		public Base(T data) : base(data) => Log.Event(new StackFrame(true));
+		protected Base(T data) : base(data) => Log.Event(new StackFrame(true));
+
+		/// <summary>
+		/// Constructor for the <see cref="Base"/> class
+		/// </summary>
+		/// <param name="data">A <see cref="Base{T}"/> data value</param>
+		public Base(Base<T> data) : this(data.Data) => Log.Event(new StackFrame(true));
 
 		public static implicit operator Base<T>(T data) => new(data);
 
@@ -211,7 +273,7 @@
 			return Out;
 		}
 
-		/// <inheritdoc cref="object.Equals(object?)"/>
+		/// <inheritdoc cref="Base.Equals(object?)"/>
 		/// <exception cref="BaseException"/>
 		public override bool Equals(object? obj)
 		{
@@ -346,6 +408,25 @@
 			}
 
 			return Out;
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			try
+			{
+				base.Dispose(disposing);
+			}
+			catch (BaseException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new BaseException(ex, sf);
+			}
 		}
 
 		public static bool operator ==(Base<T>? left, Base<T>? right) => EqualityComparer<Base<T>>.Default.Equals(left, right);

@@ -5,32 +5,96 @@
 	using System.Diagnostics;
 	using Actions;
 	using Attributes;
+	using Categories;
 	using Exceptions;
 	using Kinds;
 	using Newtonsoft.Json;
 
 	[JsonObject(MemberSerialization.OptIn)]
-	public class BaseName : Base<string>, IEquatable<BaseName?>
+	public class BaseName : Base<string>, IEquatable<BaseName?>, IBase
 	{
+		/// <summary>
+		/// The base <see cref="string"/> data for the <see cref="BaseName"/>
+		/// class
+		/// </summary>
 		[DefaultValue(Def.Name)]
-		[JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore,NullValueHandling = NullValueHandling.Include)]
+		[JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Include)]
 		public new string Data { get => base.Data; protected set => base.Data = value; }
 
 		/// <summary>
-		/// Main constructor for the <see cref="BaseName"/>
+		/// [INTERNAL] Main constructor for the <see cref="BaseName"/>
 		/// </summary>
-		/// <param name="data">A <see cref="string"/> name</param>
-		/// <exception cref="NameException"></exception>
+		/// <param name="data">
+		/// A <see cref="string"/> name
+		/// </param>
+		/// <exception cref="NameException"/>
 		[JsonConstructor, MainConstructor]
-		public BaseName(string data) : base(Def.Name)
+		internal BaseName(string data) : base(Def.Name)
 		{
 			var sf = new StackFrame(true);
 			Log.Event(sf);
 
 			try
 			{
-				if (data.Length < 40)
+				if (data.Length > Def.MaxNameLength)
 					throw new Exception($"This name's {Format.ExcValue(data)} length {Format<int>.ExcValue(data.Length)} is invalid");
+				else
+					Data = data;
+			}
+			catch (Exception ex)
+			{
+				throw new NameException(ex, sf);
+			}
+		}
+
+		/// <summary>
+		/// Constructor for the <see cref="BaseName"/> class
+		/// </summary>
+		/// <param name="kind">
+		/// An <see cref="Enum"/> value from the <see cref="Kinds"/>
+		/// </param>
+		/// <inheritdoc cref="BaseName(string)"/>
+		public BaseName(string data, Enum kind) : base(Def.Name)
+		{
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			try
+			{
+				if (kind.GetType() != typeof(DataKind) &&
+						kind.GetType() != typeof(DeviceKind) &&
+						kind.GetType() != typeof(LinkKind) &&
+						kind.GetType() != typeof(ObjectKind) &&
+						kind.GetType() != typeof(PageKind) &&
+						kind.GetType() != typeof(PlatformKind))
+					throw new Exception($"The given type {Format<Enum>.ExcValue(kind)} is not a valid kind");
+				else
+					Data = data;
+			}
+			catch (Exception ex)
+			{
+				throw new NameException(ex, sf);
+			}
+		}
+
+		/// <param name="kind">
+		/// A <see cref="BaseType"/> kind
+		/// </param>
+		/// <inheritdoc cref="BaseName(string,Enum)"/>
+		public BaseName(string data, BaseType kind) : base(Def.Name)
+		{
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			try
+			{
+				if (kind.Data.GetType() != typeof(DataKind) &&
+						kind.Data.GetType() != typeof(DeviceKind) &&
+						kind.Data.GetType() != typeof(LinkKind) &&
+						kind.Data.GetType() != typeof(ObjectKind) &&
+						kind.Data.GetType() != typeof(PageKind) &&
+						kind.Data.GetType() != typeof(PlatformKind))
+					throw new Exception($"The given type {Format<Enum>.ExcValue(kind.Data)} is not a valid kind");
 				else
 					Data = data;
 			}
@@ -69,7 +133,8 @@
 			return Out;
 		}
 
-		/// <inheritdoc cref="Base{String}.Equals(Base{String}?)"/>
+		/// <inheritdoc cref="IEquatable{BaseName}.Equals(BaseName)"/>
+		/// <exception cref="BaseException"/>
 		/// <exception cref="NameException"/>
 		public bool Equals(BaseName? other)
 		{
@@ -170,7 +235,7 @@
 			}
 			catch (Exception ex)
 			{
-				throw new BaseException(ex, sf);
+				throw new NameException(ex, sf);
 			}
 			finally
 			{
@@ -191,10 +256,36 @@
 		public static bool operator !=(BaseName? left, BaseName? right) => !(left == right);
 	}
 
-	[method: JsonConstructor, MainConstructor]
 	[JsonObject(MemberSerialization.OptIn)]
-	public class BaseName<TName>(string data) : Base<string>(data), IEquatable<BaseName<TName>?> where TName : struct, Enum
+	public class BaseName<TKind> : BaseName, IEquatable<BaseName<TKind>?> where TKind : struct, Enum
 	{
+		/// <summary>
+		/// The base <see cref="string"/> data for the <see cref="BaseName{TKind}"/> class
+		/// </summary>
+		[DefaultValue(Def.Name)]
+		[JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Include)]
+		public new string Data { get => base.Data; protected set => base.Data = value; }
+
+		/// <summary>
+		/// [INTERNAL] Main constructor for the <see cref="BaseName{TKind}"/> class
+		/// </summary>
+		/// <inheritdoc cref="BaseName(string)"/>
+		[JsonConstructor, MainConstructor]
+		internal BaseName(string data) : base(data) => Log.Event(new StackFrame(true));
+		
+		/// <summary>
+		/// Constructor for the <see cref="BaseName{TKind}"/> class
+		/// </summary>
+		/// <param name="kind">A <typeparamref name="TKind"/> kind</param>
+		/// <inheritdoc cref="BaseName(string,Enum)"/>
+		public BaseName(string name, TKind kind) : base(name, kind) => Log.Event(new StackFrame(true));
+
+		/// <param name="kind">
+		/// A <see cref="BaseType"/><![CDATA[<]]><typeparamref name="TKind"/><![CDATA[>]]> kind
+		/// </param>
+		/// <inheritdoc cref="BaseName{TKind}(string,TKind)"/>
+		public BaseName(string name, BaseType<TKind> kind) : base(name, kind.Data) => Log.Event(new StackFrame(true));
+
 		public override bool Equals(object? obj)
 		{
 			var sf = new StackFrame(true);
@@ -204,7 +295,7 @@
 
 			try
 			{
-				Out = Equals(obj as BaseName<TName>);
+				Out = Equals(obj as BaseName<TKind>);
 			}
 			catch (BaseException)
 			{
@@ -218,9 +309,27 @@
 			return Out;
 		}
 
-		public bool Equals(BaseName<TName>? other)
+		public bool Equals(BaseName<TKind>? other)
 		{
-			return other is not null && base.Equals(other) && Data == other.Data;
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			bool Out;
+
+			try
+			{
+				Out = other is not null && base.Equals(other) && Data == other.Data;
+			}
+			catch (BaseException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new NameException(ex, sf);
+			}
+
+			return Out;
 		}
 
 		/// <inheritdoc cref="BaseName.GetHashCode"/>
@@ -249,15 +358,69 @@
 
 		public override string ToJSON(Formatting? formatting = null)
 		{
-			return base.ToJSON(formatting);
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			string? Out = null;
+
+			try
+			{
+				Out = JsonConvert.SerializeObject(this, formatting ?? Def.JSONFormatting);
+			}
+			catch (Exception ex)
+			{
+				throw new NameException(ex, sf);
+			}
+			finally
+			{
+				try
+				{
+					Out ??= base.ToJSON(formatting);
+				}
+				catch (Exception)
+				{
+					Out = Def.JSON;
+				}
+			}
+
+			return Out;
 		}
 
 		public override string ToString()
 		{
-			return base.ToString();
+			var sf = new StackFrame(true);
+			Log.Event(sf);
+
+			string? Out = null;
+
+			try
+			{
+				Out = $"{Data}";
+			}
+			catch (BaseException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new NameException(ex, sf);
+			}
+			finally
+			{
+				try
+				{
+					Out ??= base.ToString();
+				}
+				catch (Exception)
+				{
+					Out = "";
+				}
+			}
+
+			return Out;
 		}
 
-		public static bool operator ==(BaseName<TName>? left, BaseName<TName>? right) => EqualityComparer<BaseName<TName>>.Default.Equals(left, right);
-		public static bool operator !=(BaseName<TName>? left, BaseName<TName>? right) => !(left == right);
+		public static bool operator ==(BaseName<TKind>? left, BaseName<TKind>? right) => EqualityComparer<BaseName<TKind>>.Default.Equals(left, right);
+		public static bool operator !=(BaseName<TKind>? left, BaseName<TKind>? right) => !(left == right);
 	}
 }
